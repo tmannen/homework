@@ -15,6 +15,7 @@ import numpy as np
 import tf_util
 import gym
 import load_policy
+import sys
 
 def main():
     import argparse
@@ -25,6 +26,7 @@ def main():
     parser.add_argument("--max_timesteps", type=int)
     parser.add_argument('--num_rollouts', type=int, default=20,
                         help='Number of expert roll outs')
+
     args = parser.parse_args()
 
     print('loading and building expert policy')
@@ -47,6 +49,8 @@ def main():
             done = False
             totalr = 0.
             steps = 0
+
+            print(max_steps)
             while not done:
                 action = policy_fn(obs[None,:])
                 observations.append(obs)
@@ -67,6 +71,8 @@ def main():
 
         expert_data = {'observations': np.array(observations),
                        'actions': np.array(actions)}
+
+        pickle.dump(expert_data, open("expert_data_" + args.envname, "wb"))
 
 if __name__ == '__main__':
     main()
