@@ -4,6 +4,7 @@ import pickle
 import tf_util
 import sys
 import numpy as np
+import load_policy
 
 #TODO: take observations from our untrained model. Use expert model to label these observations
 
@@ -12,6 +13,25 @@ def means_stds(expert_data):
     means = np.mean(expert_data, axis=0)
     stds = np.std(expert_data, axis=0)
     return means, stds
+
+def train(sess, output, data, epochs):
+    for epoch in range(epochs):
+        losses = []
+        for i in range(0, max_observations, batch_size):
+
+            batch_observations = observations[i:min(i+batch_size, max_observations-1)]
+            batch_expert_actions = expert_actions[i:min(i+batch_size, max_observations-1)]
+
+            _, loss_score = sess.run([train_op, loss],
+                                feed_dict = {
+                                    x : batch_observations,
+                                    expert_action_placeholder : batch_expert_actions
+                                }
+                            )
+
+            losses.append(loss_score)
+
+        print(np.mean(losses))
 
 def main():
     import argparse
@@ -41,33 +61,6 @@ def main():
 
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
-    observations = expert_data['observations']
-    expert_means, expert_stds = means_stds(expert_data['observations'])
-
-    if args.preprocess:
-        observations = (observations - expert_means) / (expert_stds + 1e-6) #scale the expert observations
-    expert_actions = expert_data['actions']
-    expert_actions = expert_actions.reshape((expert_actions.shape[0], expert_actions.shape[-1]))
-
-    max_observations = expert_actions.shape[0]
-    for epoch in range(35):
-        losses = []
-        for i in range(0, max_observations, batch_size):
-
-            batch_observations = observations[i:min(i+batch_size, max_observations-1)]
-            batch_expert_actions = expert_actions[i:min(i+batch_size, max_observations-1)]
-
-            _, loss_score = sess.run([train_op, loss],
-                                feed_dict = {
-                                    x : batch_observations,
-                                    expert_action_placeholder : batch_expert_actions
-                                }
-                            )
-
-            losses.append(loss_score)
-
-        print(np.mean(losses))
-
 
     import gym
     env = gym.make(args.envname)
@@ -76,24 +69,27 @@ def main():
     returns = []
     observations = []
     actions = []
+    expert_actions = []
     eps = 1e-6 #used for preprocessing, in case std is 0
+
+    print('loading and building expert policy')
+    policy_fn = load_policy.load_policy(args.expert_policy_file)
+    print('loaded and built')
 
     for i in range(args.num_rollouts):
         print('iter', i)
         obs = env.reset()
-        if args.preprocess:
-            obs = (obs - expert_means) / (expert_stds + eps)
         done = False
         totalr = 0.
         steps = 0
 
         while not done:
             action = sess.run(output, feed_dict={x: obs[None,:]}) #run with our model
+            expert_action = policy_fn(obs[None, :])
             observations.append(obs)
             actions.append(action)
-            obs, r, done, _ = env.step(action)
-            if args.preprocess:
-                obs = (obs - expert_means) / (expert_stds + eps)
+            expert_actions.append(expert_action)
+            obs, r, done, _ = env.step(action) #take the action the untrained model does to step into unexplored area
             totalr += r
             steps += 1
             if args.render:
@@ -101,6 +97,7 @@ def main():
             if steps % 100 == 0: print("%i/%i"%(steps, max_steps))
             if steps >= max_steps:
                 break
+
         returns.append(totalr)
 
     print('returns', returns)
