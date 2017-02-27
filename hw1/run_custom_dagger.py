@@ -18,8 +18,6 @@ import load_policy
 import sys
 import tensorflow.contrib.slim as slim
 
-def train(sess, expert_action_placeholder, x, output, observations, expert_actions, epochs, batch_size):
-
 def means_stds(expert_data):
     #mean center and scale
     means = np.mean(expert_data, axis=0)
@@ -97,31 +95,21 @@ def main():
 
             #then use these actions and observations to train our model
             for epoch in range(epochs):
-            losses = []
-            for i in range(0, max_observations, batch_size):
+                for i in range(0, max_observations, batch_size):
+                    batch_observations = observations[i:min(i+batch_size, max_observations-1)]
+                    batch_expert_actions = expert_actions[i:min(i+batch_size, max_observations-1)]
 
-                batch_observations = observations[i:min(i+batch_size, max_observations-1)]
-                batch_expert_actions = expert_actions[i:min(i+batch_size, max_observations-1)]
-
-                _, loss_score = sess.run([train_op, loss],
-                                    feed_dict = {
-                                        x : batch_observations,
-                                        expert_action_placeholder : batch_expert_actions
-                                    }
-                                )
-
-                losses.append(loss_score)
-
-        print(np.mean(losses))
+                    _, loss_score = sess.run([train_op, loss],
+                                        feed_dict = {
+                                            x : batch_observations,
+                                            expert_action_placeholder : batch_expert_actions
+                                        }
+                                    )
 
         print('returns', returns)
         print('mean return', np.mean(returns))
         print('std of return', np.std(returns))
 
-        expert_data = {'observations': np.array(observations),
-                       'expert_actions': np.array(expert_actions)}
-
-        pickle.dump(expert_data, open("expert_data_dagger_" + args.envname, "wb"))
 
 if __name__ == '__main__':
     main()
