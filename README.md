@@ -1,10 +1,10 @@
-###Berkeley Deep Reinforcement Learning course
+#Berkeley Deep Reinforcement Learning course
 
 ##Homework 1
 
 In homework one we used Behavioural cloning and the DAgger algorithm to learn different scenarios.
 
-#Behaviour cloning:
+###Behaviour cloning:
 
 - Get expert/human labeled data as observations and actions it takes. Save this to a variable or a file.
 - Use this data to learn a new model. Actions are targets, observations are input. An L2 loss can be used, so the model targets converge to the expert model
@@ -12,7 +12,7 @@ In homework one we used Behavioural cloning and the DAgger algorithm to learn di
 (Done in file run_custom_bc.py)
 
 
-#DAgger:
+###DAgger:
 
 - Get some expert/human labeled data first as in Behavioural cloning and train a model for some epochs.
 - Run your model on new data. Take new actions based on your model, and have the expert model 'label' these new observations according to it.
