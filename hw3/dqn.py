@@ -129,8 +129,11 @@ def learn(env,
     
     # YOUR CODE HERE
 
-    q_function = q_func(img_in=obs_t_float, num_actions=num_actions, scope="q_func", reuse=False)
+    q_function_out = q_func(img_in=obs_t_float, num_actions=num_actions, scope="q_func", reuse=False)
+    q_function_target_out = q_func(img_in=obs_tp1_float, num_actions=num_actions, scope="q_func_target", reuse=False)
     q_func_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope="q_func")
+    q_func_target_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope="q_func_target") #target? is this it?
+    #max action of next Qs values? target is old network?
     total_error = 
 
     ######
