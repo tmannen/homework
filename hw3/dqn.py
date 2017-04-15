@@ -134,7 +134,8 @@ def learn(env,
     q_func_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope="q_func")
     q_func_target_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope="q_func_target") #target? is this it?
     #max action of next Qs values? target is old network?
-    total_error = 
+    #in slides Q max action etc. is taken - no need to do that here? the network estimates it?
+    total_error = tf.square(q_function_target_out - q_function_out)
 
     ######
 
