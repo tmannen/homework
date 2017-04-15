@@ -164,6 +164,7 @@ def learn(env,
     best_mean_episode_reward = -float('inf')
     last_obs = env.reset()
     LOG_EVERY_N_STEPS = 10000
+    epsilon = 0.1
 
     for t in itertools.count():
         ### 1. Check stopping criterion
@@ -203,6 +204,18 @@ def learn(env,
         #####
         
         # YOUR CODE HERE
+        next_idx = replay_buffer.store_frame(last_obs)
+
+        encoded_obs = replay_buffer.encode_recent_observation()
+        q_vals = session.run(q_func, {obs_t_float : encoded_obs})
+        action = None
+        if random.random() <= epsilon:
+            action_idx = random.choice(range(num_actions))
+        else:
+            action_idx = tf.argmax(q_vals)
+
+        last_obs, reward, done, info = env.step(action)
+        replay_buffer.store_effect(next_idx, action, reward, done)
 
         #####
 
