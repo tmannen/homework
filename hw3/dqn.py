@@ -266,6 +266,12 @@ def learn(env,
             #####
             
             # YOUR CODE HERE
+            obs_batch, act_batch, rew_batch, next_obs_batch, done_mask = replay_buffer.sample(batch_size=batch_size)
+            
+            initialize_interdependent_variables(session, tf.global_variables(), {
+                    obs_t_ph: obs_t_batch,
+                    obs_tp1_ph: obs_tp1_batch,
+                })
 
             #####
 
