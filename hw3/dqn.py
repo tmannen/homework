@@ -129,13 +129,35 @@ def learn(env,
     
     # YOUR CODE HERE
 
-    q_function_out = q_func(img_in=obs_t_float, num_actions=num_actions, scope="q_func", reuse=False)
-    q_function_target_out = q_func(img_in=obs_tp1_float, num_actions=num_actions, scope="q_func_target", reuse=False)
+    q_func_out = q_func(img_in=obs_t_float, num_actions=num_actions, scope="q_func", reuse=False)
+    q_func_next = q_func(img_in=obs_tp1_float, num_actions=num_actions, scope="q_func", reuse=True)
+    q_func_target = q_func(img_in=obs_tp1_float, num_actions=num_actions, scope="q_func_target", reuse=False)
     q_func_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope="q_func")
-    q_func_target_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope="q_func_target") #target? is this it?
+    q_func_target_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope="q_func_target")
     #max action of next Qs values? target is old network?
-    #in slides Q max action etc. is taken - no need to do that here? the network estimates it?
+    #in slides Q max action etc. is taken - no need to do that here? the network estimates it? yes it is needed
+
+    q_val = rew_t_ph * gamma * q_func_next
     total_error = tf.square(q_function_target_out - q_function_out)
+
+    #from https://github.com/luofan18/homework/blob/master/hw3/dqn.py. I don't really understand tf.stop_gradient or tf.identity?
+    with tf.name_scope('one_step_forward_best_action'):
+        next_a = tf.argmax(tf.stop_gradient(q_func_next), 1)
+        a_mask = tf.one_hot(next_a, num_actions)
+
+    #slide 13 on advanced q functions, double DQN
+    with tf.name_scope('target_q'):
+        next_q = tf.identity(q_func_target)
+        target_q = tf.reduce_sum(a_mask * next_q, 1) * (1 - done_mask_ph) * gamma + rew_t_ph
+        target_q = tf.stop_gradient(target_q)
+
+    with tf.name_scope('this_q'):
+        #qfunc give q value for all actions so we need to use mask to get the q value of just the one action?
+        this_q = q_func_learn * tf.one_hot(act_t_ph, num_actions)
+        this_q = tf.reduce_sum(this_q, 1)
+    # calculate the huber loss, but first just use standard mean square error
+    with tf.name_scope('square_loss'):
+        total_error = tf.square(target_q - this_q)
 
     ######
 
@@ -207,15 +229,18 @@ def learn(env,
         next_idx = replay_buffer.store_frame(last_obs)
 
         encoded_obs = replay_buffer.encode_recent_observation()
-        q_vals = session.run(q_func, {obs_t_float : encoded_obs})
+        
         action = None
         if random.random() <= epsilon:
-            action_idx = random.choice(range(num_actions))
+            action = random.choice(range(num_actions))
         else:
-            action_idx = tf.argmax(q_vals)
+            action = session.run(tf.argmax(q_func_out, 1), {obs_t_float : encoded_obs})
 
         last_obs, reward, done, info = env.step(action)
         replay_buffer.store_effect(next_idx, action, reward, done)
+
+        if done:
+            last_obs = env.reset()
 
         #####
 
@@ -267,7 +292,15 @@ def learn(env,
             
             # YOUR CODE HERE
             obs_batch, act_batch, rew_batch, next_obs_batch, done_mask = replay_buffer.sample(batch_size=batch_size)
-            
+            session.run(train_fn, feed_dict=
+                            {
+                                obs_t_ph : ,
+                                act_t_ph : ,
+                                rew_t_ph : ,
+                                obs_tp1_ph : ,
+                                done_mask_ph
+                            })
+
             initialize_interdependent_variables(session, tf.global_variables(), {
                     obs_t_ph: obs_t_batch,
                     obs_tp1_ph: obs_tp1_batch,
