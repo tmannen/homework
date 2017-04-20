@@ -152,9 +152,10 @@ def learn(env,
         target_q = tf.stop_gradient(target_q)
 
     with tf.name_scope('this_q'):
-        #qfunc give q value for all actions so we need to use mask to get the q value of just the one action?
+        #qfunc gives q value for all actions so we need to use mask to get the q value of just the one action?
         this_q = q_func_learn * tf.one_hot(act_t_ph, num_actions)
         this_q = tf.reduce_sum(this_q, 1)
+
     # calculate the huber loss, but first just use standard mean square error
     with tf.name_scope('square_loss'):
         total_error = tf.square(target_q - this_q)
@@ -292,19 +293,24 @@ def learn(env,
             
             # YOUR CODE HERE
             obs_batch, act_batch, rew_batch, next_obs_batch, done_mask = replay_buffer.sample(batch_size=batch_size)
+
+            if not model_initialized:
+                initialize_interdependent_variables(session, tf.global_variables(), {
+                        obs_t_ph: obs_batch, obs_tp1_ph: next_obs_batch})
+                session.run(update_target_fn)
+                model_initialized = True
+
             session.run(train_fn, feed_dict=
                             {
-                                obs_t_ph : ,
-                                act_t_ph : ,
-                                rew_t_ph : ,
-                                obs_tp1_ph : ,
-                                done_mask_ph
+                                obs_t_ph : obs_batch,
+                                act_t_ph : act_batch,
+                                rew_t_ph : rew_batch,
+                                obs_tp1_ph : next_obs_batch,
+                                done_mask_ph : done_mask
                             })
 
-            initialize_interdependent_variables(session, tf.global_variables(), {
-                    obs_t_ph: obs_t_batch,
-                    obs_tp1_ph: obs_tp1_batch,
-                })
+            if t % target_update_freq == 0:
+                session.run(update_target_fn)
 
             #####
 
